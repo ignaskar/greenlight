@@ -32,7 +32,11 @@ done
 
 >&2 echo "Postgres is up and running on port ${DB_PORT}!"
 
-DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
-export DATABASE_URL
+GREENLIGHT_DB_DSN=postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable
+export GREENLIGHT_DB_DSN
+
+>&2 echo "Migrating database..."
+migrate -path=./migrations -database=$GREENLIGHT_DB_DSN up
+>&2 echo "Database migrated successfully"
 
 >&2 echo "GO GO GO!"
