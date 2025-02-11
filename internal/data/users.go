@@ -22,7 +22,7 @@ type User struct {
 	Email     string    `json:"email"`
 	Password  password  `json:"-"`
 	Activated bool      `json:"activated"`
-	Version   int       `json"-"`
+	Version   int       `json:"-"`
 }
 
 // plaintext is a pointer to a string so that we're able to distinguish between a plaintext password not being present
