@@ -216,15 +216,15 @@ func (app *application) useCORS(next http.Handler) http.Handler {
 }
 
 type metricsResponseWriter struct {
-	wrapped http.ResponseWriter
-	statusCode int
+	wrapped       http.ResponseWriter
+	statusCode    int
 	headerWritten bool
 }
 
 func newMetricsResponseWriter(w http.ResponseWriter) *metricsResponseWriter {
 	return &metricsResponseWriter{
-		wrapped: w,
-		statusCode: http.StatusOK,
+		wrapped:       w,
+		statusCode:    http.StatusOK,
 		headerWritten: false,
 	}
 }
@@ -253,10 +253,10 @@ func (mw *metricsResponseWriter) Unwrap() http.ResponseWriter {
 
 func (app *application) metrics(next http.Handler) http.Handler {
 	var (
-		totalRequestsReceived = expvar.NewInt("total_requests_received")
-		totalResponsesSent = expvar.NewInt("total_responses_sent")
+		totalRequestsReceived           = expvar.NewInt("total_requests_received")
+		totalResponsesSent              = expvar.NewInt("total_responses_sent")
 		totalProcessingTimeMicroseconds = expvar.NewInt("total_processing_time_μs")
-		totalResponsesSentByStatus = expvar.NewMap("total_responses_sent_by_status")
+		totalResponsesSentByStatus      = expvar.NewMap("total_responses_sent_by_status")
 	)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
