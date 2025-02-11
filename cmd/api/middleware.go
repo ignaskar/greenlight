@@ -30,7 +30,7 @@ func (app *application) recoverPanic(next http.Handler) http.Handler {
 func (app *application) rateLimit(next http.Handler) http.Handler {
 	// Any code before returning handlerfunc will run once when we wrap smth in middleware
 	type client struct {
-		limiter *rate.Limiter
+		limiter  *rate.Limiter
 		lastSeen time.Time
 	}
 
@@ -39,7 +39,7 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 		clients = make(map[string]*client)
 	)
 
-	go func()  {
+	go func() {
 		for {
 			time.Sleep(time.Minute)
 
