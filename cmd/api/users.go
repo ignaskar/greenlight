@@ -21,6 +21,16 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	v := validator.NewValidator()
+
+	data.ValidateEmail(v, input.Email)
+	data.ValidatePasswordPlaintext(v, input.Password)
+
+	if !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
 	user := &data.User{
 		Name:      input.Name,
 		Email:     input.Email,
@@ -30,13 +40,6 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 	err = user.Password.Set(input.Password)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
-		return
-	}
-
-	v := validator.NewValidator()
-
-	if data.ValidateEmail(v, user.Email); !v.Valid() {
-		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
 
