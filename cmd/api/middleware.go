@@ -137,7 +137,7 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 // to wrap handlers with middleware directly
 
 func (app *application) requireAuthenticatedUser(next http.HandlerFunc) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		user := app.contextGetUser(r)
 
 		if user.IsAnonymous() {
@@ -146,7 +146,7 @@ func (app *application) requireAuthenticatedUser(next http.HandlerFunc) http.Han
 		}
 
 		next.ServeHTTP(w, r)
-	})
+	}
 }
 
 func (app *application) requireActivatedUser(next http.HandlerFunc) http.HandlerFunc {
@@ -208,7 +208,7 @@ func (app *application) useCORS(next http.Handler) http.Handler {
 				}
 			}
 		}
-		
+
 		next.ServeHTTP(w, r)
 	})
 }
