@@ -8,6 +8,7 @@ import (
 	"greenlight/internal/validator"
 	"net"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -29,6 +30,11 @@ func (app *application) recoverPanic(next http.Handler) http.Handler {
 func (app *application) rateLimit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !app.config.limiter.enabled {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		if slices.Contains(app.config.limiter.excludedURIs, r.URL.RequestURI()) {
 			next.ServeHTTP(w, r)
 			return
 		}

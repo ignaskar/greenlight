@@ -31,9 +31,10 @@ type config struct {
 		maxIdleTime  time.Duration
 	}
 	limiter struct {
-		enabled     bool
-		maxRequests int64
-		fixedWindow time.Duration
+		enabled      bool
+		maxRequests  int64
+		fixedWindow  time.Duration
+		excludedURIs []string
 	}
 	smtp struct {
 		host     string
@@ -79,6 +80,10 @@ func main() {
 	flag.BoolVar(&cfg.limiter.enabled, "limiter-enabled", true, "Enable rate limiter")
 	flag.Int64Var(&cfg.limiter.maxRequests, "limiter-max-requests", 25, "Rate limiter max requests per main window")
 	flag.DurationVar(&cfg.limiter.fixedWindow, "limiter-fixed-window-duration", 1*time.Hour, "Rate limiter fixed window duration (min. 1hr)")
+	flag.Func("limiter-excluded-uris", "URIs excluded from rate-limiting (space separated)", func(val string) error {
+		cfg.limiter.excludedURIs = strings.Fields(val)
+		return nil
+	})
 
 	flag.StringVar(&cfg.smtp.host, "smtp-host", "sandbox.smtp.mailtrap.io", "SMTP host")
 	flag.IntVar(&cfg.smtp.port, "smtp-port", 587, "SMTP port")
@@ -115,6 +120,9 @@ func main() {
 	}))
 	expvar.Publish("database", expvar.Func(func() any {
 		return db.Stats()
+	}))
+	expvar.Publish("redis", expvar.Func(func() any {
+		return rdb.PoolStats()
 	}))
 	expvar.Publish("timestamp", expvar.Func(func() any {
 		return time.Now().Unix()
