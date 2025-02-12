@@ -6,6 +6,7 @@ import (
 	"expvar"
 	"flag"
 	"greenlight/internal/data"
+	"greenlight/internal/limiter"
 	"greenlight/internal/mailer"
 	"log/slog"
 	"os"
@@ -30,9 +31,9 @@ type config struct {
 		maxIdleTime  time.Duration
 	}
 	limiter struct {
-		rps     float64
-		burst   int
-		enabled bool
+		enabled     bool
+		maxRequests int64
+		fixedWindow time.Duration
 	}
 	smtp struct {
 		host     string
@@ -51,11 +52,12 @@ type config struct {
 }
 
 type application struct {
-	config config
-	logger *slog.Logger
-	models data.Models
-	mailer mailer.Mailer
-	wg     sync.WaitGroup
+	config  config
+	logger  *slog.Logger
+	models  data.Models
+	mailer  mailer.Mailer
+	limiter *limiter.RateLimiter
+	wg      sync.WaitGroup
 }
 
 func main() {
@@ -74,9 +76,9 @@ func main() {
 	flag.StringVar(&cfg.redis.addr, "redis-addr", "localhost:6379", "Redis address")
 	flag.StringVar(&cfg.redis.password, "redis-password", "", "Redis password")
 
-	flag.Float64Var(&cfg.limiter.rps, "limiter-rps", 2, "Rate limiter maximum requests per second")
-	flag.IntVar(&cfg.limiter.burst, "limiter-burst", 4, "Rate limiter maximum burst")
 	flag.BoolVar(&cfg.limiter.enabled, "limiter-enabled", true, "Enable rate limiter")
+	flag.Int64Var(&cfg.limiter.maxRequests, "limiter-max-requests", 25, "Rate limiter max requests per main window")
+	flag.DurationVar(&cfg.limiter.fixedWindow, "limiter-fixed-window-duration", 1*time.Hour, "Rate limiter fixed window duration (min. 1hr)")
 
 	flag.StringVar(&cfg.smtp.host, "smtp-host", "sandbox.smtp.mailtrap.io", "SMTP host")
 	flag.IntVar(&cfg.smtp.port, "smtp-port", 587, "SMTP port")
@@ -118,11 +120,14 @@ func main() {
 		return time.Now().Unix()
 	}))
 
+	limiter := limiter.NewRateLimiter(rdb, cfg.limiter.maxRequests, cfg.limiter.fixedWindow)
+
 	app := application{
-		config: cfg,
-		logger: logger,
-		models: data.NewModels(db),
-		mailer: mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
+		config:  cfg,
+		logger:  logger,
+		models:  data.NewModels(db),
+		limiter: limiter,
+		mailer:  mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
 	}
 
 	err = app.serve()
