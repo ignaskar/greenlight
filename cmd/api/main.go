@@ -15,6 +15,7 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
+	"github.com/redis/go-redis/v9"
 )
 
 const version = "1.0.0"
@@ -43,6 +44,10 @@ type config struct {
 	cors struct {
 		trustedOrigins []string
 	}
+	redis struct {
+		addr     string
+		password string
+	}
 }
 
 type application struct {
@@ -66,6 +71,9 @@ func main() {
 	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
 	flag.DurationVar(&cfg.db.maxIdleTime, "db-max-idle-time", 15*time.Minute, "PostgreSQL max idle time")
 
+	flag.StringVar(&cfg.redis.addr, "redis-addr", "localhost:6379", "Redis address")
+	flag.StringVar(&cfg.redis.password, "redis-password", "", "Redis password")
+
 	flag.Float64Var(&cfg.limiter.rps, "limiter-rps", 2, "Rate limiter maximum requests per second")
 	flag.IntVar(&cfg.limiter.burst, "limiter-burst", 4, "Rate limiter maximum burst")
 	flag.BoolVar(&cfg.limiter.enabled, "limiter-enabled", true, "Enable rate limiter")
@@ -88,9 +96,16 @@ func main() {
 		logger.Error(err.Error())
 		os.Exit(1)
 	}
-
 	defer db.Close()
 	logger.Info("database connection pool established")
+
+	rdb, err := setupRedis(cfg)
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
+	}
+	defer rdb.Close()
+	logger.Info("redis connection established")
 
 	expvar.NewString("version").Set(version)
 	expvar.Publish("goroutines", expvar.Func(func() any {
@@ -115,6 +130,23 @@ func main() {
 		logger.Error(err.Error())
 		os.Exit(1)
 	}
+}
+
+func setupRedis(cfg config) (*redis.Client, error) {
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     cfg.redis.addr,
+		Password: cfg.redis.password,
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := rdb.Ping(ctx).Err(); err != nil {
+		rdb.Close()
+		return nil, err
+	}
+
+	return rdb, nil
 }
 
 func openDB(cfg config) (*sql.DB, error) {

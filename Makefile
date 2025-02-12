@@ -41,6 +41,18 @@ db/migrations/up: confirm
 	@echo 'Running up migrations...'
 	migrate -path ./migrations -database ${GREENLIGHT_DB_DSN} up
 
+## docker/up: run docker-compose up
+.PHONY: docker/up
+docker/up:
+	@echo Starting services...
+	docker compose up -d
+
+## docker/up: run docker-compose down
+.PHONY: docker/down
+docker/down:
+	@echo Starting services...
+	docker compose down
+
 # ==================================================================================== #
 # QUALITY CONTROL
 # ==================================================================================== #
